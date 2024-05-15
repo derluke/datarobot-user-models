@@ -1,6 +1,6 @@
 {
   "id": "6583d56f5627082b3cff990e",
-  "name": "[DataRobot] Python 3.11 Notebook Drop-In",
+  "name": "[DataRobot] Python 3.11 Notebook Drop-In (Databricks Connect)",
   "description": "This template environment can be used to create Python 3.11 notebook environments.",
   "programmingLanguage": "python",
   "environmentVersionId": "662fc814776ffc807f2f6f88",

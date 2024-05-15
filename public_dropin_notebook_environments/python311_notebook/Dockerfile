@@ -53,19 +53,22 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Add any package that will be installed on system level here:
 RUN microdnf update \
-    && microdnf install -y python$PYTHON_VERSION-$PYTHON_EXACT_VERSION python$PYTHON_VERSION-devel-$PYTHON_EXACT_VERSION \
+  && microdnf install -y python$PYTHON_VERSION-$PYTHON_EXACT_VERSION python$PYTHON_VERSION-devel-$PYTHON_EXACT_VERSION \
   gcc-8.5.0 gcc-c++-8.5.0 glibc-devel-2.28 libffi-devel-3.1 graphviz-2.40.1 python$PYTHON_VERSION-pip \
   openblas-0.3.15 python$PYTHON_VERSION-scipy shadow-utils-2:4.6 passwd-0.80 git-2.39.3 openssh-server tar-2:1.30 gzip-1.9 unzip-6.0 zip-3.0 wget-1.19.5 \
   java-11-openjdk-headless-11.0.23.0.9-3.el8 vim-minimal-2:8.0.1763 nano-2.9.8 \
-  && pip3 install -U --no-cache-dir pip==23.1.2 setuptools==68.2.2 \
-  && curl -sS https://webi.sh/gh | sh && cp ~/.local/bin/gh /usr/bin/ \
-    && microdnf clean all
+  && microdnf clean all
+
+
+
+RUN  pip3 install -U --no-cache-dir pip==23.1.2 setuptools==68.2.2 \
+  && curl -sS https://webi.sh/gh | sh && cp ~/.local/bin/gh /usr/bin/ 
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    VENV_PATH=${VENV_PATH} \
-    PIP_NO_CACHE_DIR=1 \
-    NOTEBOOKS_KERNEL="python"
+  PYTHONDONTWRITEBYTECODE=1 \
+  VENV_PATH=${VENV_PATH} \
+  PIP_NO_CACHE_DIR=1 \
+  NOTEBOOKS_KERNEL="python"
 
 ENV PATH="$VENV_PATH/bin:$PATH" \
   PYTHONPATH="/home/notebooks/.ipython/extensions:/home/notebooks/storage"
@@ -86,13 +89,13 @@ RUN mkdir /etc/authorized_keys
 # Removing pip leftovers to not have trivy complain
 RUN rm -rf /lib/python3.9/site-packages/pip-20.2.4.dist-info && \
   rm -rf /etc/system/kernel/.venv/lib/python3.9/site-packages/pip-20.2.4.dist-info && \
-    rm -rf /lib/python3.8/site-packages/pip-19.3.1.dist-info && \
+  rm -rf /lib/python3.8/site-packages/pip-19.3.1.dist-info && \
   rm -rf /etc/system/kernel/.venv/lib/python3.8/site-packages/pip-19.3.1.dist-info
 
 # Custom user to run the image from
 
 RUN groupadd -g $GID -o $UNAME && \
-    useradd -l -m -u $UID -g $GID -o -s /bin/bash $UNAME
+  useradd -l -m -u $UID -g $GID -o -s /bin/bash $UNAME
 
 # Prompt customizations
 COPY ./setup-prompt.sh /etc/profile.d/setup-prompt.sh
@@ -127,11 +130,11 @@ ARG VENV_PATH
 
 COPY ./dr_requirements.txt ./agent/requirements-agent.txt ${WORKDIR}/
 RUN python3 -m pip install --no-cache-dir -r ${WORKDIR}/dr_requirements.txt \
-    && python3 -m pip install --no-cache-dir -r ${WORKDIR}/requirements-agent.txt \
-    && rm ${WORKDIR}/dr_requirements.txt \
-    && rm ${WORKDIR}/requirements-agent.txt \
-    && rm ${VENV_PATH}/share/jupyter/kernels/python3/kernel.json \
-    && chmod a+x ${WORKDIR}/start_server.sh
+  && python3 -m pip install --no-cache-dir -r ${WORKDIR}/requirements-agent.txt \
+  && rm ${WORKDIR}/dr_requirements.txt \
+  && rm ${WORKDIR}/requirements-agent.txt \
+  && rm ${VENV_PATH}/share/jupyter/kernels/python3/kernel.json \
+  && chmod a+x ${WORKDIR}/start_server.sh
 
 # Monitoring agent port
 EXPOSE 8889
@@ -146,6 +149,7 @@ ARG PYTHON_VERSION
 COPY ./kernel.json ${VENV_PATH}/share/jupyter/kernels/python3/
 COPY ./requirements.txt ${WORKDIR}/
 RUN pip3 install --no-cache-dir -r ${WORKDIR}/requirements.txt \
+  && pip install git+https://github.com/datarobot-community/datarobotx-idp.git@v0.2.3 \
   && rm ${WORKDIR}/requirements.txt
 
 FROM base AS kernel
@@ -163,12 +167,16 @@ LABEL com.datarobot.repo-sha=$GIT_COMMIT
 # Removing pip leftovers to not have trivy complain
 RUN rm -rf /lib/python3.9/site-packages/pip-20.2.4.dist-info && \
   rm -rf "${VENV_PATH}"/lib/python3.9/site-packages/pip-20.2.4.dist-info && \
-    rm -rf /lib/python3.8/site-packages/pip-19.3.1.dist-info && \
+  rm -rf /lib/python3.8/site-packages/pip-19.3.1.dist-info && \
   rm -rf "${VENV_PATH}"/lib/python3.8/site-packages/pip-19.3.1.dist-info && \
   rm -rf "${VENV_PATH}"/lib/python3.9/site-packages/setuptools-50.3.2.dist-info && \
   rm -rf "${VENV_PATH}"/lib/python3.8/site-packages/setuptools-41.6.0.dist-info  && \
   rm -rf "${VENV_PATH}"/lib/python3.9/site-packages/setuptools-68.2.2.dist-info
 
+RUN mkdir -p /home/notebooks/.ipython/profile_default/startup/
+COPY --chown=$UNAME:$UNAME drdb_connect.py /home/notebooks/.ipython/profile_default/startup/
+
+# RUN chown -R $UNAME:$UNAME /home/notebooks/.ipython/profile/startup/drdb_connect.py
 
 RUN chown -R $UNAME:$UNAME ${WORKDIR} /home/notebooks
 
